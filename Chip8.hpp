@@ -50,48 +50,155 @@ public:
         randByte = std::uniform_int_distribution<uint8_t>(0, 255U);
     }
 
-    void LoadROM(char const *filename);
-    void OP_00E0();
-    void OP_00EE();
-    void OP_2nnn();
-};
-
-void Chip8::LoadROM(char const *filename)
-{
-    std::ifstream file(filename, std::ios::binary || std::ios::ate);
-
-    if (file.is_open())
+    void LoadROM(char const *filename)
     {
-        std::streampos size = file.tellg();
-        char *buffer = new char[size];
+        std::ifstream file(filename, std::ios::binary | std::ios::ate);
 
-        file.seekg(0, std::ios::beg);
-        file.read(buffer, size);
-        file.close();
-
-        for (size_t i = 0; i < size; ++i)
+        if (file.is_open())
         {
-            memory[START_ADDRESS + i] = buffer[i];
+            std::streampos size = file.tellg();
+            char *buffer = new char[size];
+
+            file.seekg(0, std::ios::beg);
+            file.read(buffer, size);
+            file.close();
+
+            for (size_t i = 0; i < size; ++i)
+            {
+                memory[START_ADDRESS + i] = buffer[i];
+            }
+            delete[] buffer;
         }
-        delete[] buffer;
     }
-}
 
-void Chip8::OP_00E0()
-{
-    std::fill(std::begin(video), std::end(video), 0);
-    return;
-}
-void Chip8::OP_00EE()
-{
-    --sp;
-    pc = stack[sp];
-    return;
-}
+    void OP_00E0()
+    {
+        std::fill(std::begin(video), std::end(video), 0);
+        return;
+    }
+    void OP_00EE()
+    {
+        --sp;
+        pc = stack[sp];
+        return;
+    }
 
-void Chip8::OP_2nnn()
-{
-    uint16_t addr = opcode & 0x0FFu;
-    pc = addr;
-    return;
-}
+    void OP_1nnn()
+    {
+        uint16_t addr = opcode & 0x0FFu;
+        pc = addr;
+        return;
+    }
+    void OP_2nnn()
+    {
+        uint16_t addr = opcode & 0x0FFu;
+        stack[sp] = addr;
+        ++sp;
+        pc = addr;
+        return;
+    }
+    void OP_3xkk()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t byte = (opcode & 0x00FFu);
+
+        if (registers[Vx] == byte)
+        {
+            pc += 2;
+        }
+        return;
+    }
+    void OP_4xkk()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t byte = (opcode & 0x00FFu);
+
+        if (registers[Vx] != byte)
+        {
+            pc += 2;
+        }
+        return;
+    }
+    void OP_5xy0()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t Vy = (opcode & 0x00F0u) >> 4u;
+
+        if (registers[Vx] == registers[Vy])
+        {
+            pc += 2;
+        }
+        return;
+    }
+    void OP_6xkk()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t byte = (opcode & 0x00FFu);
+
+        registers[Vx] = byte;
+        return;
+    }
+    void OP_7xkk()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t byte = (opcode & 0x00FFu);
+
+        registers[Vx] += byte;
+        return;
+    }
+    void OP_8xy0()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t Vy = (opcode & 0x00F0u) >> 4u;
+
+        registers[Vx] += registers[Vy];
+
+        return;
+    }
+    void OP_8xy1()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t Vy = (opcode & 0x00F0u) >> 4u;
+
+        registers[Vx] += registers[Vy];
+
+        return;
+    }
+    void OP_8xy2()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t Vy = (opcode & 0x00F0u) >> 4u;
+
+        registers[Vx] &= registers[Vy];
+
+        return;
+    }
+    void OP_8xy3()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t Vy = (opcode & 0x00F0u) >> 4u;
+
+        registers[Vx] ^= registers[Vy];
+
+        return;
+    }
+    void OP_8xy4()
+    {
+        uint8_t Vx = (opcode & 0x0F00u) >> 8u;
+        uint8_t Vy = (opcode & 0x00F0u) >> 4u;
+        uint16_t sum = registers[Vx] + registers[Vy];
+
+        if (sum > 255u)
+        {
+            registers[0xF] = 1;
+        }
+        else
+        {
+            registers[0xF] = 0;
+        }
+
+        registers[Vx] = (0xFFU & sum);
+
+        return;
+    }
+};
